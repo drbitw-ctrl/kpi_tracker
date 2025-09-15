@@ -73,16 +73,19 @@ manhours_col = st.sidebar.selectbox("Man-hours Spent column", options=columns)
 date_format_hint = st.sidebar.text_input("Date format (optional)", value="")
 
 # Parse dates
-try:
-    if date_format_hint.strip():
-        df_preview['__date__'] = pd.to_datetime(df_preview[date_col], format=date_format_hint, errors='coerce')
-    else:
-        df_preview['__date__'] = pd.to_datetime(df_preview[date_col], errors='coerce')
-except Exception:
-    df_preview['__date__'] = pd.to_datetime(df_preview[date_col], errors='coerce')
+def parse_dates(series, hint=""):
+    s = series.astype(str).str.strip()
+    # if values look like YYYYMMDD (8 digits), parse that
+    if s.str.match(r"^\d{8}$").all():
+        return pd.to_datetime(s, format="%Y%m%d", errors="coerce")
+    if hint.strip():
+        return pd.to_datetime(s, format=hint, errors="coerce")
+    return pd.to_datetime(s, errors="coerce")
+
+df_preview['__date__'] = parse_dates(df_preview[date_col], hint=date_format_hint)
 
 if df_preview['__date__'].isna().all():
-    st.error("Failed to parse any dates. Please check the date format.")
+    st.error("Failed to parse any dates. Please check your date format or column selection.")
     st.stop()
 
 # Build clean working DataFrame
